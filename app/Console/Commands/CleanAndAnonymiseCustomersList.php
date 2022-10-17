@@ -13,7 +13,7 @@ class CleanAndAnonymiseCustomersList extends Command
      *
      * @var string
      */
-    protected $signature = 'customers:clean';
+    protected $signature = 'make:customers:clean';
 
     /**
      * The console command description.

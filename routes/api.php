@@ -21,7 +21,7 @@ use App\Http\Controllers\CustomerController;
 Route::prefix('customers/')->group(function(){
     Route::get('/clean', [CustomerController::class,'clean']);
     Route::get('/', [CustomerController::class, 'getAll']);
-    Route::get('/visits', [CustomerController::class,'getOneCustomerData']);
+    Route::get('/visits', [CustomerController::class,'getOneCustomerStoreVisitsData']);
     Route::patch('/message/{id}', [CustomerController::class,'acceptCommercialMessage'])->name('message');
     Route::delete('/delete/{id}', [CustomerController::class, 'softDelete']);
 });

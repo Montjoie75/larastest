@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\CustomerResource;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use App\Http\Requests\CommercialMessageRequest;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -25,13 +26,14 @@ class CustomerController extends BaseController
         return Customer::get();
     }
 
+
     /**
      * API : Expose all customers data 
      */
-    public function getAll(): JsonResponse
+    public function getAll()
     {
         $customers = CustomerResource::collection(Customer::all());
-        return response()->json($customers);
+        return $customers;
     }
 
 
@@ -42,51 +44,46 @@ class CustomerController extends BaseController
     {
         $acceptMessage = $request->message;
 
-        $customer = Customer::findOrFail($id);
+        try{
+            $customer = Customer::findOrFail($id);
+        }
+        catch(ModelNotFoundException $e){
+            return response()->json(['message' => 'No change applied : ' . $e->getMessage() . '. Check if model is deleted.']);
+        }
+     
         $customer->update(['has_optin' => $acceptMessage]);
 
-        return 'Receiving commercial message params updated';
+        return response()->json(['message' => 'Receiving commercial message params updated.']);
     }
+
 
     /** 
      * Test - for soft deleting customers data
      */
     public function softDelete(Request $request, $id)
     {
-
-        $customer = Customer::find($id);
-        $customer->delete();
-        return response()->json(['message' => 'Customers deleted']);
-    }
-
-    /**
-     * 
-     */
-
-    public function clean()
-    {
-        $customers = Customer::with('visits')->get();
-
-        foreach ($customers as $customer) {
-
-            $lasVisit = $customer->visits->max('created_at')->format('Y-m-d');
-
-            if ($lasVisit < now()->subMonths(6)->format('Y-m-d')) {
-                $customer->delete();
-            }
+        try{
+            $customer = Customer::findOrFail($id);
         }
+        catch(ModelNotFoundException $e){
+            return response()->json(['message' => 'No change applied : ' . $e->getMessage() . '. Check if model is already deleted.']);
+        }
+
+        $customer->delete();
+        return response()->json(['message' => 'Customer deleted']);
     }
 
+    
     /**
      * API : Expose customers visits data for each store
      */
-    public function getOneCustomerData()
+    public function getOneCustomerStoreVisitsData()
     {
         $rawRequest='select c.first_name as name, s.name as store, count(v.created_at) as visits, min(v.created_at) as first_visit, max(v.created_at) as last_visit from visits as v inner join customers as c on c.id=v.customer_id inner join stores as s on s.id=v.store_id group by c.id';
 
         $customerVisits = DB::select(DB::raw($rawRequest));
 
-        Storage::put('./requests.sql', $rawRequest);
+        File::put('./requests.sql', $rawRequest);
 
         return response()->json($customerVisits);
     }
